@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Mor. HPC Platform"
+version = "1.0.0"
+id = "artifacts/mor-platform"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20842
+
+[services.development]
+run = "pnpm --filter @workspace/mor-platform run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mor-platform", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/mor-platform/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20842"
+BASE_PATH = "/"

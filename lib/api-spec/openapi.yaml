@@ -3,20 +3,30 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Mor. HPC Cluster Management Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: admin
+    description: Admin-only cluster management
+  - name: jobs
+    description: Job submission and management
+  - name: resources
+    description: Resource availability and scheduling
+  - name: users
+    description: User profile
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +34,700 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Admin ────────────────────────────────────────────────────────────────
+  /admin/stats:
+    get:
+      operationId: getClusterStats
+      tags: [admin]
+      summary: Cluster-wide summary statistics
+      responses:
+        "200":
+          description: Cluster stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClusterStats"
+
+  /admin/nodes:
+    get:
+      operationId: listNodes
+      tags: [admin]
+      summary: List all compute nodes
+      responses:
+        "200":
+          description: List of nodes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Node"
+
+  /admin/nodes/{id}:
+    patch:
+      operationId: updateNode
+      tags: [admin]
+      summary: Update a node (status, partition)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NodeUpdate"
+      responses:
+        "200":
+          description: Updated node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Node"
+        "404":
+          description: Node not found
+
+  /admin/jobs:
+    get:
+      operationId: listAllJobs
+      tags: [admin]
+      summary: List all jobs across all users (admin view)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: integer
+        - name: partition
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: All jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+
+  /admin/jobs/{id}:
+    patch:
+      operationId: updateJobAdmin
+      tags: [admin]
+      summary: Update job status or priority (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobAdminUpdate"
+      responses:
+        "200":
+          description: Updated job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: Job not found
+
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: List all users
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /admin/utilization:
+    get:
+      operationId: getUtilizationHistory
+      tags: [admin]
+      summary: Cluster utilization over time (last 24 h, hourly points)
+      responses:
+        "200":
+          description: Utilization history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UtilizationPoint"
+
+  /admin/activity:
+    get:
+      operationId: getActivityFeed
+      tags: [admin]
+      summary: Recent cluster activity events
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Activity events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+
+  # ─── Jobs ─────────────────────────────────────────────────────────────────
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [jobs]
+      summary: List the current user's jobs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User's jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+
+    post:
+      operationId: createJob
+      tags: [jobs]
+      summary: Submit a new job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobInput"
+      responses:
+        "201":
+          description: Submitted job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "400":
+          description: Invalid input
+
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: Get a single job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: Job not found
+
+    delete:
+      operationId: cancelJob
+      tags: [jobs]
+      summary: Cancel a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cancelled job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: Job not found
+
+  /jobs/{id}/schedule:
+    post:
+      operationId: scheduleJob
+      tags: [jobs]
+      summary: Schedule a job to start at a specific time
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobScheduleInput"
+      responses:
+        "200":
+          description: Scheduled job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "400":
+          description: Invalid schedule time or insufficient resources
+        "404":
+          description: Job not found
+
+  # ─── Resources & Queue ────────────────────────────────────────────────────
+  /resources/availability:
+    get:
+      operationId: getResourceAvailability
+      tags: [resources]
+      summary: Current cluster resource availability
+      responses:
+        "200":
+          description: Resource availability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceAvailability"
+
+  /resources/slots:
+    get:
+      operationId: listScheduleSlots
+      tags: [resources]
+      summary: Available time slots for scheduling (next 48 h)
+      parameters:
+        - name: cpuRequired
+          in: query
+          schema:
+            type: integer
+        - name: gpuRequired
+          in: query
+          schema:
+            type: integer
+        - name: memoryGB
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Available scheduling slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduleSlot"
+
+  /queue/estimate:
+    get:
+      operationId: getQueueEstimate
+      tags: [resources]
+      summary: Estimate queue wait time for given resource requirements
+      parameters:
+        - name: cpuRequired
+          in: query
+          schema:
+            type: integer
+        - name: gpuRequired
+          in: query
+          schema:
+            type: integer
+        - name: memoryGB
+          in: query
+          schema:
+            type: integer
+        - name: partition
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Queue time estimate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueueEstimate"
+
+  # ─── Partitions ───────────────────────────────────────────────────────────
+  /partitions:
+    get:
+      operationId: listPartitions
+      tags: [resources]
+      summary: List available HPC partitions/queues
+      responses:
+        "200":
+          description: Partitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Partition"
+
+  # ─── Dashboard (user) ─────────────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getUserSummary
+      tags: [dashboard]
+      summary: Current user's usage summary
+      responses:
+        "200":
+          description: User summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSummary"
+
+  # ─── Current user ─────────────────────────────────────────────────────────
+  /users/me:
+    get:
+      operationId: getCurrentUser
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ─── Entities ─────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, name, email, role, department]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, user]
+        department:
+          type: string
+        institution:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    Node:
+      type: object
+      required: [id, name, cpuCores, gpuCount, memoryGB, status, cpuLoad, gpuLoad, memoryLoad, partition]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        cpuCores:
+          type: integer
+        gpuCount:
+          type: integer
+        memoryGB:
+          type: integer
+        status:
+          type: string
+          enum: [active, offline, maintenance]
+        cpuLoad:
+          type: number
+        gpuLoad:
+          type: number
+        memoryLoad:
+          type: number
+        partition:
+          type: string
+        updatedAt:
+          type: string
+
+    Partition:
+      type: object
+      required: [id, name, maxWallHours, maxCpus, maxMemoryGB, maxGpus, description]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        maxWallHours:
+          type: integer
+        maxCpus:
+          type: integer
+        maxMemoryGB:
+          type: integer
+        maxGpus:
+          type: integer
+        description:
+          type: string
+        priority:
+          type: integer
+
+    Job:
+      type: object
+      required: [id, userId, userName, jobName, status, cpuRequired, gpuRequired, memoryGB, wallHours, partition, priority, submittedAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        jobName:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed, cancelled, scheduled]
+        cpuRequired:
+          type: integer
+        gpuRequired:
+          type: integer
+        memoryGB:
+          type: integer
+        wallHours:
+          type: integer
+        partition:
+          type: string
+        priority:
+          type: integer
+        note:
+          type: ["string", "null"]
+        queuePosition:
+          type: ["integer", "null"]
+        submittedAt:
+          type: string
+        scheduledFor:
+          type: ["string", "null"]
+        estimatedStartAt:
+          type: ["string", "null"]
+        estimatedCompletedAt:
+          type: ["string", "null"]
+        startedAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        progress:
+          type: ["number", "null"]
+
+    ClusterStats:
+      type: object
+      required: [totalNodes, activeNodes, offlineNodes, maintenanceNodes, totalCpus, usedCpus, totalGpus, usedGpus, totalMemoryGB, usedMemoryGB, queuedJobs, runningJobs, completedToday, avgWaitMinutes]
+      properties:
+        totalNodes:
+          type: integer
+        activeNodes:
+          type: integer
+        offlineNodes:
+          type: integer
+        maintenanceNodes:
+          type: integer
+        totalCpus:
+          type: integer
+        usedCpus:
+          type: integer
+        totalGpus:
+          type: integer
+        usedGpus:
+          type: integer
+        totalMemoryGB:
+          type: integer
+        usedMemoryGB:
+          type: integer
+        queuedJobs:
+          type: integer
+        runningJobs:
+          type: integer
+        completedToday:
+          type: integer
+        avgWaitMinutes:
+          type: integer
+
+    ResourceAvailability:
+      type: object
+      required: [availableCpus, availableGpus, availableMemoryGB, cpuUtilPercent, gpuUtilPercent, memoryUtilPercent]
+      properties:
+        availableCpus:
+          type: integer
+        availableGpus:
+          type: integer
+        availableMemoryGB:
+          type: integer
+        cpuUtilPercent:
+          type: number
+        gpuUtilPercent:
+          type: number
+        memoryUtilPercent:
+          type: number
+
+    QueueEstimate:
+      type: object
+      required: [estimatedWaitMinutes, estimatedStartAt, confidence]
+      properties:
+        estimatedWaitMinutes:
+          type: integer
+        estimatedStartAt:
+          type: string
+        confidence:
+          type: string
+          enum: [low, medium, high]
+
+    ScheduleSlot:
+      type: object
+      required: [startAt, endAt, availableCpus, availableGpus, availableMemoryGB]
+      properties:
+        startAt:
+          type: string
+        endAt:
+          type: string
+        availableCpus:
+          type: integer
+        availableGpus:
+          type: integer
+        availableMemoryGB:
+          type: integer
+
+    UtilizationPoint:
+      type: object
+      required: [timestamp, cpuPercent, gpuPercent, memoryPercent, queueDepth]
+      properties:
+        timestamp:
+          type: string
+        cpuPercent:
+          type: number
+        gpuPercent:
+          type: number
+        memoryPercent:
+          type: number
+        queueDepth:
+          type: integer
+
+    ActivityEvent:
+      type: object
+      required: [id, type, message, timestamp, severity]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [job_submitted, job_started, job_completed, job_failed, job_cancelled, node_offline, node_online, node_maintenance]
+        message:
+          type: string
+        timestamp:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, error]
+        jobId:
+          type: ["integer", "null"]
+        userId:
+          type: ["integer", "null"]
+
+    UserSummary:
+      type: object
+      required: [totalJobs, completedJobs, runningJobs, queuedJobs, totalCpuHours, avgWaitMinutes]
+      properties:
+        totalJobs:
+          type: integer
+        completedJobs:
+          type: integer
+        runningJobs:
+          type: integer
+        queuedJobs:
+          type: integer
+        totalCpuHours:
+          type: number
+        avgWaitMinutes:
+          type: integer
+        scheduledJobs:
+          type: integer
+
+    # ─── Input schemas ────────────────────────────────────────────────────
+    JobInput:
+      type: object
+      required: [jobName, cpuRequired, memoryGB, wallHours, partition]
+      properties:
+        jobName:
+          type: string
+          minLength: 1
+        cpuRequired:
+          type: integer
+          minimum: 1
+        gpuRequired:
+          type: integer
+          minimum: 0
+        memoryGB:
+          type: integer
+          minimum: 1
+        wallHours:
+          type: integer
+          minimum: 1
+        partition:
+          type: string
+        priority:
+          type: integer
+        note:
+          type: string
+
+    JobAdminUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [queued, running, completed, failed, cancelled]
+        priority:
+          type: integer
+
+    JobScheduleInput:
+      type: object
+      required: [scheduledFor]
+      properties:
+        scheduledFor:
+          type: string
+
+    NodeUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, offline, maintenance]
+        partition:
+          type: string
