@@ -19,7 +19,7 @@ export default function RoleSelector() {
     <div className="min-h-[100dvh] flex items-center justify-center bg-sidebar text-sidebar-foreground p-4">
       <div className="max-w-3xl w-full">
         <div className="mb-12 text-center">
-<h1 className="text-4xl font-bold tracking-tight mb-4 text-[#785abe]">mor.</h1>
+<h1 className="font-bold tracking-tight mb-4 text-[#785abe] text-[80px]">mor.</h1>
           <p className="text-sidebar-foreground/70 text-lg max-w-lg mx-auto">
             HPC Cluster Management Platform. <br/> Select your operational context.
           </p>
