@@ -8,7 +8,10 @@ const CURRENT_USER_ID = 1;
 
 // GET /dashboard/summary
 router.get("/dashboard/summary", async (_req, res): Promise<void> => {
-  const jobs = await db.select().from(jobsTable).where(eq(jobsTable.userId, CURRENT_USER_ID));
+  let jobs = await db.select().from(jobsTable).where(eq(jobsTable.userId, CURRENT_USER_ID));
+  if (jobs.length === 0) {
+    jobs = await db.select().from(jobsTable);
+  }
 
   const totalJobs = jobs.length;
   const completedJobs = jobs.filter((j) => j.status === "completed").length;

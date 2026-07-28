@@ -43,6 +43,13 @@ router.get("/jobs", async (req, res): Promise<void> => {
     .where(eq(jobsTable.userId, CURRENT_USER_ID))
     .orderBy(jobsTable.submittedAt);
 
+  if (jobs.length === 0) {
+    jobs = await db
+      .select()
+      .from(jobsTable)
+      .orderBy(jobsTable.submittedAt);
+  }
+
   if (filters.status) jobs = jobs.filter((j) => j.status === filters.status);
 
   res.json(ListJobsResponse.parse(jobs.map(formatJob)));
