@@ -1,28 +1,204 @@
 import { useGetUserSummary, useListJobs, useGetResourceAvailability } from "@workspace/api-client-react";
 import { StatCard, JobStatusBadge } from "@/components/shared";
-import { Clock, CheckCircle2, Play, List, Zap } from "lucide-react";
+import {
+  Clock, CheckCircle2, Play, List, Zap, BrainCircuit,
+  ArrowRight, Cpu, HardDrive, Timer, TrendingUp, Info,
+  ChevronRight, AlertCircle
+} from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatTime, formatWaitTime } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+import { formatWaitTime, formatDuration, formatETA } from "@/lib/utils";
+
+// ── Confidence helpers ────────────────────────────────────────────────────────
+
+type Confidence = "high" | "medium" | "low";
+
+function deriveConfidence(
+  queuePosition: number | null,
+  cpuUtil: number,
+  gpuUtil: number,
+): Confidence {
+  const maxUtil = Math.max(cpuUtil, gpuUtil);
+  if ((queuePosition ?? 0) <= 1 && maxUtil < 65) return "high";
+  if ((queuePosition ?? 0) <= 3 && maxUtil < 85) return "medium";
+  return "low";
+}
+
+const CONFIDENCE_STYLES: Record<Confidence, { label: string; dot: string; badge: string }> = {
+  high:   { label: "High confidence",   dot: "bg-emerald-400", badge: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+  medium: { label: "Medium confidence", dot: "bg-amber-400",   badge: "bg-amber-500/10  text-amber-600  border-amber-500/20"  },
+  low:    { label: "Low confidence",    dot: "bg-rose-400",    badge: "bg-rose-500/10   text-rose-600   border-rose-500/20"   },
+};
+
+function ConfidenceBadge({ level }: { level: Confidence }) {
+  const s = CONFIDENCE_STYLES[level];
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border", s.badge)}>
+      <span className={cn("w-1.5 h-1.5 rounded-full", s.dot)} />
+      {s.label}
+    </span>
+  );
+}
+
+// ── Running job card ──────────────────────────────────────────────────────────
+
+function RunningJobCard({ job, cpuUtil, gpuUtil }: { job: any; cpuUtil: number; gpuUtil: number }) {
+  const now = Date.now();
+  const msLeft = job.estimatedCompletedAt ? new Date(job.estimatedCompletedAt).getTime() - now : null;
+  const progress = job.progress != null ? Math.round(job.progress * 100) : null;
+  const conf = deriveConfidence(null, cpuUtil, gpuUtil);
+
+  return (
+    <Link href={`/jobs/${job.id}`}>
+      <div className="group p-5 rounded-xl border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1 min-w-0 pr-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+              </span>
+              <p className="font-semibold truncate">{job.jobName}</p>
+            </div>
+            <p className="text-xs text-muted-foreground font-mono">
+              #{job.id} · {job.partition} · {job.cpuRequired}c / {job.gpuRequired || 0}g / {job.memoryGB}GB
+            </p>
+          </div>
+          <ChevronRight size={16} className="text-muted-foreground/40 group-hover:text-primary transition-colors mt-0.5 shrink-0" />
+        </div>
+
+        {/* Progress */}
+        {progress != null && (
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-xs text-muted-foreground">Progress</span>
+              <span className="text-xs font-mono font-semibold">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
+
+        {/* ETA block */}
+        <div className="bg-primary/5 border border-primary/15 rounded-lg p-3 mb-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Timer size={13} className="text-primary" />
+            <span className="text-xs font-medium text-primary uppercase tracking-wider">Predicted completion</span>
+          </div>
+          <p className="text-lg font-bold font-mono">{formatETA(job.estimatedCompletedAt)}</p>
+          {msLeft != null && msLeft > 0 && (
+            <p className="text-sm text-muted-foreground mt-0.5">{formatDuration(msLeft)} remaining</p>
+          )}
+        </div>
+
+        <ConfidenceBadge level={conf} />
+      </div>
+    </Link>
+  );
+}
+
+// ── Queued job card ───────────────────────────────────────────────────────────
+
+function QueuedJobCard({ job, cpuUtil, gpuUtil }: { job: any; cpuUtil: number; gpuUtil: number }) {
+  const now = Date.now();
+  const msWait = job.estimatedStartAt ? new Date(job.estimatedStartAt).getTime() - now : null;
+  const conf = deriveConfidence(job.queuePosition, cpuUtil, gpuUtil);
+
+  return (
+    <Link href={`/jobs/${job.id}`}>
+      <div className="group p-5 rounded-xl border bg-card hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1 min-w-0 pr-4">
+            <div className="flex items-center gap-2 mb-1">
+              {job.queuePosition != null && (
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">
+                  {job.queuePosition}
+                </span>
+              )}
+              <p className="font-semibold truncate">{job.jobName}</p>
+            </div>
+            <p className="text-xs text-muted-foreground font-mono">
+              #{job.id} · {job.partition} · {job.cpuRequired}c / {job.gpuRequired || 0}g / {job.memoryGB}GB
+            </p>
+          </div>
+          <ChevronRight size={16} className="text-muted-foreground/40 group-hover:text-primary transition-colors mt-0.5 shrink-0" />
+        </div>
+
+        {/* Queue position meter */}
+        {job.queuePosition != null && (
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-1.5">
+              <span className="text-xs text-muted-foreground">Queue position</span>
+              <span className="text-xs font-mono font-semibold">#{job.queuePosition} of {job.queuePosition + 1}</span>
+            </div>
+            <div className="flex gap-1">
+              {Array.from({ length: Math.min(job.queuePosition + 1, 6) }).map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-1.5 flex-1 rounded-full",
+                    i < job.queuePosition ? "bg-amber-400/70" : "bg-primary"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ETA block */}
+        <div className="bg-amber-500/5 border border-amber-500/15 rounded-lg p-3 mb-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock size={13} className="text-amber-600" />
+            <span className="text-xs font-medium text-amber-600 uppercase tracking-wider">Predicted start</span>
+          </div>
+          <p className="text-lg font-bold font-mono">{formatETA(job.estimatedStartAt)}</p>
+          {msWait != null && msWait > 0 && (
+            <p className="text-sm text-muted-foreground mt-0.5">{formatDuration(msWait)} wait</p>
+          )}
+        </div>
+
+        <ConfidenceBadge level={conf} />
+      </div>
+    </Link>
+  );
+}
+
+// ── Main dashboard ────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const { data: summary, isLoading: loadingSummary } = useGetUserSummary();
-  const { data: jobs, isLoading: loadingJobs } = useListJobs({ status: "running" }); // Let's just fetch all or running for quick list
-  const { data: allJobs } = useListJobs(); 
+  const { data: allJobs } = useListJobs();
   const { data: resources } = useGetResourceAvailability();
 
-  if (loadingSummary) return <div className="animate-pulse">Loading dashboard...</div>;
+  if (loadingSummary) return <div className="animate-pulse p-4 text-muted-foreground">Loading dashboard...</div>;
 
-  const recentJobs = allJobs?.slice(0, 5) || [];
+  const cpuUtil   = resources?.cpuUtilPercent   ?? 0;
+  const gpuUtil   = resources?.gpuUtilPercent   ?? 0;
+  const memUtil   = resources?.memoryUtilPercent ?? 0;
+
+  const runningJobs = allJobs?.filter(j => j.status === "running") ?? [];
+  const queuedJobs  = allJobs?.filter(j => j.status === "queued").sort(
+    (a, b) => (a.queuePosition ?? 99) - (b.queuePosition ?? 99)
+  ) ?? [];
+  const activeCount = runningJobs.length + queuedJobs.length;
+
+  // Derive overall engine confidence from cluster state
+  const overallConf: Confidence =
+    cpuUtil < 60 && gpuUtil < 60 && queuedJobs.length <= 2 ? "high" :
+    cpuUtil < 80 && gpuUtil < 80 && queuedJobs.length <= 5 ? "medium" : "low";
+
+  const confStyle = CONFIDENCE_STYLES[overallConf];
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+      {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight mb-1">Researcher Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your computation tasks and resource allocation.</p>
+          <p className="text-muted-foreground">Real-time job telemetry and queue forecasts for your account.</p>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/schedule">
@@ -34,121 +210,203 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Running Jobs" 
-          value={summary?.runningJobs || 0} 
-          icon={Play}
-          trend="Currently active"
-        />
-        <StatCard 
-          title="Queued Jobs" 
-          value={summary?.queuedJobs || 0} 
-          icon={List}
-          trend="Waiting for resources"
-        />
-        <StatCard 
-          title="Completed Today" 
-          value={summary?.completedJobs || 0} 
-          icon={CheckCircle2}
-          trend="Out of total history"
-        />
-        <StatCard 
-          title="Avg Wait Time" 
-          value={formatWaitTime(summary?.avgWaitMinutes || 0)} 
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="Running Jobs"    value={summary?.runningJobs ?? 0}  icon={Play}         trend="Currently active" />
+        <StatCard title="In Queue"        value={summary?.queuedJobs  ?? 0}  icon={List}         trend="Waiting for resources" />
+        <StatCard title="Completed"       value={summary?.completedJobs ?? 0} icon={CheckCircle2} trend="Your job history" />
+        <StatCard
+          title="Avg Wait Time"
+          value={formatWaitTime(summary?.avgWaitMinutes ?? 0)}
           icon={Clock}
           trend="Based on your recent jobs"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle>Recent Jobs</CardTitle>
-            <Link href="/jobs" className="text-sm text-primary hover:underline font-medium">View all</Link>
-          </CardHeader>
-          <CardContent>
-            {recentJobs.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border border-dashed mt-4">
-                No recent jobs found.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Job ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Submitted</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentJobs.map(job => (
-                    <TableRow key={job.id}>
-                      <TableCell className="font-mono text-xs">#{job.id}</TableCell>
-                      <TableCell className="font-medium">
-                        <Link href={`/jobs/${job.id}`} className="hover:underline hover:text-primary">
-                          {job.jobName}
-                        </Link>
-                      </TableCell>
-                      <TableCell><JobStatusBadge status={job.status} /></TableCell>
-                      <TableCell className="text-muted-foreground">{formatTime(job.submittedAt)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+      {/* ── Prediction engine + sidebar ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Live Cluster Availability</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium">CPU</span>
-                <span className="text-sm font-mono">{resources?.availableCpus || 0} cores free</span>
-              </div>
-              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all" 
-                  style={{ width: `${resources?.cpuUtilPercent || 0}%` }}
-                />
-              </div>
-              <div className="text-xs text-muted-foreground mt-1 text-right">{resources?.cpuUtilPercent || 0}% utilized</div>
-            </div>
+        {/* Left 2/3 — Predictive Engine */}
+        <div className="lg:col-span-2 space-y-4">
 
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium">GPU</span>
-                <span className="text-sm font-mono">{resources?.availableGpus || 0} units free</span>
+          {/* Engine header card */}
+          <Card className="border-primary/20 bg-primary/[0.03]">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <BrainCircuit size={20} className="text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      Mor. Predictive Engine
+                      <span className={cn(
+                        "inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border",
+                        confStyle.badge
+                      )}>
+                        <span className={cn("w-1.5 h-1.5 rounded-full", confStyle.dot)} />
+                        {overallConf === "high" ? "High precision" : overallConf === "medium" ? "Moderate precision" : "Variable conditions"}
+                      </span>
+                    </CardTitle>
+                    <CardDescription className="mt-0.5">
+                      Estimates derived from real-time queue depth, partition load, and historical throughput.
+                    </CardDescription>
+                  </div>
+                </div>
+                <Link href="/jobs">
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground shrink-0">
+                    All jobs <ArrowRight size={13} />
+                  </Button>
+                </Link>
               </div>
-              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all" 
-                  style={{ width: `${resources?.gpuUtilPercent || 0}%` }}
-                />
-              </div>
-              <div className="text-xs text-muted-foreground mt-1 text-right">{resources?.gpuUtilPercent || 0}% utilized</div>
-            </div>
+            </CardHeader>
+          </Card>
 
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-medium">Memory</span>
-                <span className="text-sm font-mono">{resources?.availableMemoryGB || 0} GB free</span>
+          {/* No active jobs state */}
+          {activeCount === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed text-center bg-card">
+              <div className="p-3 rounded-full bg-muted mb-3">
+                <BrainCircuit size={24} className="text-muted-foreground" />
               </div>
-              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all" 
-                  style={{ width: `${resources?.memoryUtilPercent || 0}%` }}
-                />
-              </div>
-              <div className="text-xs text-muted-foreground mt-1 text-right">{resources?.memoryUtilPercent || 0}% utilized</div>
+              <p className="font-medium">No active jobs to forecast</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+                Submit a job to see real-time queue position and completion estimates here.
+              </p>
+              <Link href="/jobs/new" className="mt-4">
+                <Button size="sm" className="gap-2"><Zap size={14} /> Submit Job</Button>
+              </Link>
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          {/* Running jobs */}
+          {runningJobs.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Play size={14} className="text-primary" />
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  Running — {runningJobs.length} job{runningJobs.length > 1 ? "s" : ""}
+                </h3>
+              </div>
+              <div className="grid gap-3">
+                {runningJobs.map(job => (
+                  <RunningJobCard key={job.id} job={job} cpuUtil={cpuUtil} gpuUtil={gpuUtil} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Queued jobs */}
+          {queuedJobs.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3 mt-2">
+                <Clock size={14} className="text-amber-500" />
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  In Queue — {queuedJobs.length} job{queuedJobs.length > 1 ? "s" : ""}
+                </h3>
+              </div>
+              <div className="grid gap-3">
+                {queuedJobs.map(job => (
+                  <QueuedJobCard key={job.id} job={job} cpuUtil={cpuUtil} gpuUtil={gpuUtil} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right 1/3 — Queue Intelligence + Resources */}
+        <div className="space-y-4">
+
+          {/* Queue Intelligence */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <TrendingUp size={15} className="text-primary" />
+                Queue Intelligence
+              </CardTitle>
+              <CardDescription>Factors shaping current estimates</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-muted-foreground">Jobs in system queue</span>
+                  <span className="font-mono font-semibold">{queuedJobs.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-muted-foreground">Active jobs cluster-wide</span>
+                  <span className="font-mono font-semibold">{runningJobs.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-muted-foreground">Your avg wait (history)</span>
+                  <span className="font-mono font-semibold">{formatWaitTime(summary?.avgWaitMinutes ?? 0)}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-muted-foreground">CPU / GPU pressure</span>
+                  <span className="font-mono font-semibold">
+                    {Math.round(cpuUtil)}% / {Math.round(gpuUtil)}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Estimate methodology note */}
+              <div className="bg-muted/40 rounded-lg p-3 flex gap-2.5">
+                <Info size={13} className="text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  ETAs factor in current queue depth, per-partition throughput rates, and average job runtimes from the last 7 days.
+                </p>
+              </div>
+
+              {queuedJobs.length > 0 && (
+                <Link href="/schedule">
+                  <Button variant="outline" size="sm" className="w-full gap-2">
+                    <Clock size={13} /> Reserve a guaranteed slot
+                  </Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Cluster availability */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Cpu size={15} className="text-primary" />
+                Cluster Availability
+              </CardTitle>
+              <CardDescription>Live resource state</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[
+                { label: "CPU", value: cpuUtil, free: `${resources?.availableCpus ?? 0} cores` },
+                { label: "GPU", value: gpuUtil, free: `${resources?.availableGpus ?? 0} units` },
+                { label: "Memory", value: memUtil, free: `${resources?.availableMemoryGB ?? 0} GB` },
+              ].map(({ label, value, free }) => (
+                <div key={label}>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-xs font-medium">{label}</span>
+                    <span className="text-xs font-mono text-muted-foreground">{free} free</span>
+                  </div>
+                  <Progress value={value} className="h-1.5" />
+                  <div className="text-right mt-1">
+                    <span className={cn(
+                      "text-[10px] font-mono",
+                      value > 85 ? "text-rose-500" : value > 65 ? "text-amber-500" : "text-emerald-500"
+                    )}>
+                      {Math.round(value)}% utilized
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              <Link href="/resources">
+                <Button variant="ghost" size="sm" className="w-full gap-1 text-xs text-muted-foreground mt-1">
+                  Full resource view <ArrowRight size={12} />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+        </div>
       </div>
     </div>
   );
