@@ -38,16 +38,6 @@ export function Sidebar() {
         </Link>
       </div>
 
-      <div className="px-4 mb-4">
-        <div className="bg-sidebar-accent/50 rounded-lg p-3 border border-sidebar-border">
-          <div className="text-xs text-sidebar-foreground/60 mb-1 uppercase tracking-wider font-semibold">Context</div>
-          <div className="font-medium text-sidebar-foreground flex items-center gap-2">
-            <div className={cn("w-2 h-2 rounded-full", isAdmin ? "bg-amber-400" : "bg-emerald-400")} />
-            {isAdmin ? "Cluster Admin" : "Researcher"}
-          </div>
-        </div>
-      </div>
-
       <nav className="flex-1 px-3 space-y-1">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -70,9 +60,17 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-sidebar-border space-y-3">
+        <div className="bg-sidebar-accent/50 rounded-lg p-2.5 border border-sidebar-border">
+          <div className="text-[10px] text-sidebar-foreground/60 mb-0.5 uppercase tracking-wider font-semibold">Active Context</div>
+          <div className="font-medium text-xs text-sidebar-foreground flex items-center gap-2">
+            <div className={cn("w-2 h-2 rounded-full", isAdmin ? "bg-amber-400" : "bg-emerald-400")} />
+            {isAdmin ? "Cluster Admin" : "Researcher"}
+          </div>
+        </div>
+
         {user ? (
-          <div className="flex items-center gap-3 mb-4 px-2">
+          <div className="flex items-center gap-3 px-1">
             <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-sm font-medium text-white border border-sidebar-border">
               {user.name.charAt(0)}
             </div>
@@ -82,12 +80,12 @@ export function Sidebar() {
             </div>
           </div>
         ) : (
-          <div className="h-12" />
+          <div className="h-8" />
         )}
         
         <button 
           onClick={handleLogout}
-          className="flex items-center gap-2 text-sidebar-foreground/60 hover:text-white transition-colors w-full px-2 py-1.5 text-sm font-medium rounded-md hover:bg-sidebar-accent/50"
+          className="flex items-center gap-2 text-sidebar-foreground/70 hover:text-white transition-colors w-full px-2 py-1.5 text-sm font-medium rounded-md hover:bg-sidebar-accent/50 border border-sidebar-border/50"
         >
           <LogOut size={16} />
           Switch Role

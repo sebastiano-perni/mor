@@ -202,65 +202,24 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <Link href="/schedule">
-            <Button variant="outline">Schedule Slot</Button>
-          </Link>
-          <Link href="/jobs/new">
-            <Button className="gap-2"><Zap size={16} /> Submit Job</Button>
+            <Button className="gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-sm transition-colors border-none">
+              <Clock size={16} /> Schedule Slot
+            </Button>
           </Link>
         </div>
       </div>
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard title="Running Jobs"    value={summary?.runningJobs ?? 0}  icon={Play}         trend="Currently active" />
         <StatCard title="In Queue"        value={summary?.queuedJobs  ?? 0}  icon={List}         trend="Waiting for resources" />
-        <StatCard title="Completed"       value={summary?.completedJobs ?? 0} icon={CheckCircle2} trend="Your job history" />
-        <StatCard
-          title="Avg Wait Time"
-          value={formatWaitTime(summary?.avgWaitMinutes ?? 0)}
-          icon={Clock}
-          trend="Based on your recent jobs"
-        />
       </div>
 
-      {/* ── Prediction engine + sidebar ── */}
+      {/* ── Content area ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Left 2/3 — Predictive Engine */}
+        {/* Left 2/3 — Active & Queued Jobs */}
         <div className="lg:col-span-2 space-y-4">
-
-          {/* Engine header card */}
-          <Card className="border-primary/20 bg-primary/[0.03]">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <BrainCircuit size={20} className="text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      Mor. Predictive Engine
-                      <span className={cn(
-                        "inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border",
-                        confStyle.badge
-                      )}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full", confStyle.dot)} />
-                        {overallConf === "high" ? "High precision" : overallConf === "medium" ? "Moderate precision" : "Variable conditions"}
-                      </span>
-                    </CardTitle>
-                    <CardDescription className="mt-0.5">
-                      Estimates derived from real-time queue depth, partition load, and historical throughput.
-                    </CardDescription>
-                  </div>
-                </div>
-                <Link href="/jobs">
-                  <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground shrink-0">
-                    All jobs <ArrowRight size={13} />
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-          </Card>
 
           {/* No active jobs state */}
           {activeCount === 0 && (
@@ -268,12 +227,12 @@ export default function Dashboard() {
               <div className="p-3 rounded-full bg-muted mb-3">
                 <BrainCircuit size={24} className="text-muted-foreground" />
               </div>
-              <p className="font-medium">No active jobs to forecast</p>
+              <p className="font-medium">No active jobs</p>
               <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-                Submit a job to see real-time queue position and completion estimates here.
+                Schedule a slot to start running jobs on the cluster.
               </p>
-              <Link href="/jobs/new" className="mt-4">
-                <Button size="sm" className="gap-2"><Zap size={14} /> Submit Job</Button>
+              <Link href="/schedule" className="mt-4">
+                <Button size="sm" className="gap-2 bg-purple-600 hover:bg-purple-700 text-white border-none shadow-sm"><Clock size={14} /> Schedule Slot</Button>
               </Link>
             </div>
           )}
@@ -301,14 +260,21 @@ export default function Dashboard() {
               <div className="flex items-center gap-2 mb-3 mt-2">
                 <Clock size={14} className="text-amber-500" />
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  In Queue — {queuedJobs.length} job{queuedJobs.length > 1 ? "s" : ""}
+                  Next in queue
                 </h3>
               </div>
               <div className="grid gap-3">
-                {queuedJobs.map(job => (
-                  <QueuedJobCard key={job.id} job={job} cpuUtil={cpuUtil} gpuUtil={gpuUtil} />
-                ))}
+                <QueuedJobCard key={queuedJobs[0].id} job={queuedJobs[0]} cpuUtil={cpuUtil} gpuUtil={gpuUtil} />
               </div>
+              {queuedJobs.length > 1 && (
+                <div className="mt-3">
+                  <Link href="/jobs">
+                    <Button variant="outline" size="sm" className="w-full text-xs text-muted-foreground">
+                      Viewed all queued jobs ({queuedJobs.length})
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -356,13 +322,11 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              {queuedJobs.length > 0 && (
-                <Link href="/schedule">
-                  <Button variant="outline" size="sm" className="w-full gap-2">
-                    <Clock size={13} /> Reserve a guaranteed slot
-                  </Button>
-                </Link>
-              )}
+              <Link href="/schedule">
+                <Button className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white border-none shadow-sm font-medium">
+                  <Clock size={13} /> Schedule Slot
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 

@@ -37,9 +37,18 @@ export default function JobDetail() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center gap-4 text-sm mb-6">
-        <Link href="/jobs" className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
-          <ArrowLeft size={16} /> Back to Jobs
-        </Link>
+        <button 
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              window.location.href = "/dashboard";
+            }
+          }}
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors cursor-pointer"
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
       </div>
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

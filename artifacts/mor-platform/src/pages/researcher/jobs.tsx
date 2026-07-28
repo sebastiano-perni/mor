@@ -32,10 +32,26 @@ export default function Jobs() {
     }
   };
 
-  const filteredJobs = jobs?.filter(job => 
+  const STATUS_PRIORITY: Record<string, number> = {
+    running: 1,
+    queued: 2,
+    scheduled: 3,
+    completed: 4,
+    failed: 5,
+    cancelled: 6,
+  };
+
+  const filteredJobs = (jobs?.filter(job => 
     job.jobName.toLowerCase().includes(search.toLowerCase()) || 
     job.id.toString().includes(search)
-  ) || [];
+  ) || []).sort((a, b) => {
+    const priorityA = STATUS_PRIORITY[a.status] ?? 99;
+    const priorityB = STATUS_PRIORITY[b.status] ?? 99;
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+    return b.id - a.id;
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
