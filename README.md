@@ -2,18 +2,32 @@
 
 A modern High-Performance Computing (HPC) cluster management and job scheduling web application.
 
-## Containerized Launch (Recommended)
+## Containerized Launch
 
-To deploy and run the entire stack on a containerized server using Docker Compose:
+### Option 1: Local / Cloned Repository
+If you have cloned the repository locally:
 
 ```bash
 docker compose up --build
 ```
 
-This will automatically spin up:
-- **PostgreSQL 17** container on port `5432` with health checks.
-- **Application** container running the Express API (`5000`) and Vite Frontend (`3000`).
-- **Database Dump Import**: Automatically imports `dump.dump` via `pg_restore` on initial database spin-up.
+### Option 2: Standalone Remote Deployment (No repo cloning required)
+To deploy remotely on a server using **only** a single Compose file without cloning the repository:
+
+Download or copy `docker-compose.standalone.yml` to your server and run:
+
+```bash
+docker compose -f docker-compose.standalone.yml up -d --build
+```
+
+Or deploy directly via URL:
+```bash
+curl -sSL https://raw.githubusercontent.com/sebastiano-perni/mor/main/docker-compose.standalone.yml | docker compose -f - up -d --build
+```
+
+This automatically pulls the build context directly from `https://github.com/sebastiano-perni/mor.git`, builds the image (including `dump.dump`), starts PostgreSQL 17, and imports the database dump automatically.
+
+---
 
 ## Host Launch (Local Development)
 
