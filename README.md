@@ -2,9 +2,22 @@
 
 A modern High-Performance Computing (HPC) cluster management and job scheduling web application.
 
-## Local Launch
+## Containerized Launch (Recommended)
 
-To start the entire stack (PostgreSQL database, Express API server, and Vite React application):
+To deploy and run the entire stack on a containerized server using Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+This will automatically spin up:
+- **PostgreSQL 17** container on port `5432` with health checks.
+- **Application** container running the Express API (`5000`) and Vite Frontend (`3000`).
+- **Database Dump Import**: Automatically imports `dump.dump` via `pg_restore` on initial database spin-up.
+
+## Host Launch (Local Development)
+
+To start the stack directly on host:
 
 ```bash
 ./run.sh
@@ -36,5 +49,6 @@ pnpm start
 ## Database Management & Dumps
 
 - Automatic import of Replit database dumps (`dump.dump`) using `pg_restore`.
+- Force dump re-import in Docker: set `FORCE_DB_RESTORE=true`.
 - Manual DB schema push: `pnpm db:push`
 - Manual DB seeding: `pnpm db:seed`

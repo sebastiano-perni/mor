@@ -17,6 +17,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json tsconfig.base
 COPY lib/ ./lib/
 COPY artifacts/ ./artifacts/
 COPY scripts/ ./scripts/
+COPY dump.dump* ./
+
+# Install dependencies during build
+RUN pnpm install
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
