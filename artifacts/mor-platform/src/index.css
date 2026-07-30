@@ -53,50 +53,57 @@
 }
 
 :root {
-  --background: 260 20% 98%;
-  --foreground: 260 40% 10%;
-  --border: 260 20% 90%;
-  --input: 260 20% 90%;
-  --ring: 262 70% 38%;
+  /* Brand colors:
+     - Primary: #785abe (light purple)
+     - Secondary: #342e48 (dark purple)
+     - Background: #1d1827 (even darker purple background)
+     - Third/Surface text: #f6f4f0 (almost white warm orange)
+  */
+  --background: 260 24% 12%;
+  --foreground: 40 25% 95%;
+  --border: 254 18% 25%;
+  --input: 254 18% 25%;
+  --ring: 258 42% 55%;
 
-  --card: 0 0% 100%;
-  --card-foreground: 260 40% 10%;
-  --card-border: 260 20% 90%;
+  --card: 254 22% 19%;
+  --card-foreground: 40 25% 95%;
+  --card-border: 254 18% 25%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 260 40% 10%;
-  --popover-border: 260 20% 90%;
+  --popover: 254 22% 19%;
+  --popover-foreground: 40 25% 95%;
+  --popover-border: 254 18% 25%;
 
-  /* Deep Violet Primary */
-  --primary: 262 70% 38%;
+  /* Primary: #785abe */
+  --primary: 258 42% 55%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 260 20% 94%;
-  --secondary-foreground: 260 40% 15%;
+  /* Secondary: #342e48 */
+  --secondary: 254 22% 23%;
+  --secondary-foreground: 40 25% 95%;
 
-  --muted: 260 20% 96%;
-  --muted-foreground: 260 20% 40%;
+  --muted: 254 20% 20%;
+  --muted-foreground: 254 15% 70%;
 
-  --accent: 262 80% 96%;
-  --accent-foreground: 262 70% 38%;
+  --accent: 254 22% 23%;
+  --accent-foreground: 40 25% 95%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  /* Dark Sidebar */
-  --sidebar: 262 50% 10%;
-  --sidebar-foreground: 262 20% 85%;
-  --sidebar-border: 262 40% 15%;
-  --sidebar-primary: 262 70% 50%;
+  /* Sidebar: #1d1827 & #342e48 accents */
+  --sidebar: 260 24% 10%;
+  --sidebar-foreground: 40 25% 90%;
+  --sidebar-border: 254 18% 22%;
+  --sidebar-primary: 258 42% 55%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 262 40% 16%;
-  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-accent: 254 22% 23%;
+  --sidebar-accent-foreground: 40 25% 95%;
 
   --app-font-sans: 'Inter', sans-serif;
   --app-font-mono: 'JetBrains Mono', monospace;
   --radius: 0.375rem;
 
-  --chart-1: 262 70% 38%;
+  --chart-1: 258 42% 55%;
   --chart-2: 230 70% 50%;
   --chart-3: 310 70% 45%;
   --chart-4: 180 70% 40%;

@@ -25,19 +25,19 @@ async function seed() {
     .values([
       {
         id: 1,
-        name: "Dr. Ayşe Kaya",
-        email: "ayse.kaya@university.edu",
+        name: "Dr. Filippo Galletta",
+        email: "filippo1.galletta@mail.polimi.it",
         role: "user",
-        department: "Computer Science",
-        institution: "Metu",
+        department: "Data Science",
+        institution: "Politecnico Di Milano",
       },
       {
         id: 2,
-        name: "Prof. Mehmet Yılmaz",
-        email: "mehmet.yilmaz@university.edu",
+        name: "Prof. Victor Degas",
+        email: "victor.degas@univ-rennes.fr",
         role: "admin",
-        department: "Physics",
-        institution: "Metu",
+        department: "Marketing",
+        institution: "Université De Rennes",
       },
     ])
     .returning();
@@ -175,7 +175,7 @@ async function seed() {
     .values([
       {
         userId: 1,
-        userName: "Dr. Ayşe Kaya",
+        userName: "Dr. Filippo Galletta",
         jobName: "LLM-FineTuning-Job",
         status: "running",
         cpuRequired: 16,
@@ -192,7 +192,7 @@ async function seed() {
       },
       {
         userId: 1,
-        userName: "Dr. Ayşe Kaya",
+        userName: "Dr. Filippo Galletta",
         jobName: "Genome-Assembly-01",
         status: "queued",
         cpuRequired: 32,
@@ -207,7 +207,7 @@ async function seed() {
       },
       {
         userId: 1,
-        userName: "Dr. Ayşe Kaya",
+        userName: "Dr. Filippo Galletta",
         jobName: "Molecular-Dynamics-Sim",
         status: "completed",
         cpuRequired: 64,
@@ -225,7 +225,7 @@ async function seed() {
       },
       {
         userId: 2,
-        userName: "Prof. Mehmet Yılmaz",
+        userName: "Prof. Victor Degas",
         jobName: "Quantum-Chem-Calc",
         status: "running",
         cpuRequired: 32,

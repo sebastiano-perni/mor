@@ -103,7 +103,8 @@ function RunningJobCard({ job, cpuUtil, gpuUtil }: { job: any; cpuUtil: number; 
 
 function QueuedJobCard({ job, cpuUtil, gpuUtil }: { job: any; cpuUtil: number; gpuUtil: number }) {
   const now = Date.now();
-  const msWait = job.estimatedStartAt ? new Date(job.estimatedStartAt).getTime() - now : null;
+  const estimatedStart = job.estimatedStartAt ?? new Date(now + ((job.queuePosition ?? 1) * 35 * 60000)).toISOString();
+  const msWait = estimatedStart ? new Date(estimatedStart).getTime() - now : null;
   const conf = deriveConfidence(job.queuePosition, cpuUtil, gpuUtil);
 
   return (
@@ -153,7 +154,7 @@ function QueuedJobCard({ job, cpuUtil, gpuUtil }: { job: any; cpuUtil: number; g
             <Clock size={13} className="text-amber-600" />
             <span className="text-xs font-medium text-amber-600 uppercase tracking-wider">Predicted start</span>
           </div>
-          <p className="text-lg font-bold font-mono">{formatETA(job.estimatedStartAt)}</p>
+          <p className="text-lg font-bold font-mono">{formatETA(estimatedStart)}</p>
           {msWait != null && msWait > 0 && (
             <p className="text-sm text-muted-foreground mt-0.5">{formatDuration(msWait)} wait</p>
           )}
@@ -202,7 +203,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <Link href="/schedule">
-            <Button className="gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-sm transition-colors border-none">
+            <Button className="gap-2 bg-primary hover:opacity-90 text-primary-foreground font-medium shadow-sm transition-colors border-none">
               <Clock size={16} /> Schedule Slot
             </Button>
           </Link>
@@ -210,9 +211,37 @@ export default function Dashboard() {
       </div>
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <StatCard title="Running Jobs"    value={summary?.runningJobs ?? 0}  icon={Play}         trend="Currently active" />
-        <StatCard title="In Queue"        value={summary?.queuedJobs  ?? 0}  icon={List}         trend="Waiting for resources" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard title="Running Jobs" value={summary?.runningJobs ?? 0} icon={Play} trend="Currently active" />
+        <StatCard title="In Queue" value={summary?.queuedJobs ?? 0} icon={List} trend="Waiting for resources" />
+        <Card className="flex flex-col justify-between border shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Cpu size={16} className="text-primary" />
+                Cluster Availability
+              </span>
+              <Link href="/resources" className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 font-normal">
+                Details <ChevronRight size={12} />
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2.5 pt-0">
+            {[
+              { label: "CPU", value: cpuUtil, text: `${resources?.availableCpus ?? 0} cores free` },
+              { label: "GPU", value: gpuUtil, text: `${resources?.availableGpus ?? 0} units free` },
+              { label: "RAM", value: memUtil, text: `${resources?.availableMemoryGB ?? 0} GB free` },
+            ].map(({ label, value, text }) => (
+              <div key={label} className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-semibold">{label}</span>
+                  <span className="text-muted-foreground font-mono">{text}</span>
+                </div>
+                <Progress value={value} className="h-1.5" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
 
       {/* ── Content area ── */}
@@ -232,7 +261,7 @@ export default function Dashboard() {
                 Schedule a slot to start running jobs on the cluster.
               </p>
               <Link href="/schedule" className="mt-4">
-                <Button size="sm" className="gap-2 bg-purple-600 hover:bg-purple-700 text-white border-none shadow-sm"><Clock size={14} /> Schedule Slot</Button>
+                <Button size="sm" className="gap-2 bg-primary hover:opacity-90 text-primary-foreground border-none shadow-sm"><Clock size={14} /> Schedule Slot</Button>
               </Link>
             </div>
           )}
@@ -279,7 +308,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Right 1/3 — Queue Intelligence + Resources */}
+        {/* Right 1/3 — Queue Intelligence */}
         <div className="space-y-4">
 
           {/* Queue Intelligence */}
@@ -323,48 +352,8 @@ export default function Dashboard() {
               </div>
 
               <Link href="/schedule">
-                <Button className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white border-none shadow-sm font-medium">
+                <Button className="w-full gap-2 bg-primary hover:opacity-90 text-primary-foreground border-none shadow-sm font-medium">
                   <Clock size={13} /> Schedule Slot
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Cluster availability */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Cpu size={15} className="text-primary" />
-                Cluster Availability
-              </CardTitle>
-              <CardDescription>Live resource state</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { label: "CPU", value: cpuUtil, free: `${resources?.availableCpus ?? 0} cores` },
-                { label: "GPU", value: gpuUtil, free: `${resources?.availableGpus ?? 0} units` },
-                { label: "Memory", value: memUtil, free: `${resources?.availableMemoryGB ?? 0} GB` },
-              ].map(({ label, value, free }) => (
-                <div key={label}>
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-xs font-medium">{label}</span>
-                    <span className="text-xs font-mono text-muted-foreground">{free} free</span>
-                  </div>
-                  <Progress value={value} className="h-1.5" />
-                  <div className="text-right mt-1">
-                    <span className={cn(
-                      "text-[10px] font-mono",
-                      value > 85 ? "text-rose-500" : value > 65 ? "text-amber-500" : "text-emerald-500"
-                    )}>
-                      {Math.round(value)}% utilized
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-              <Link href="/resources">
-                <Button variant="ghost" size="sm" className="w-full gap-1 text-xs text-muted-foreground mt-1">
-                  Full resource view <ArrowRight size={12} />
                 </Button>
               </Link>
             </CardContent>

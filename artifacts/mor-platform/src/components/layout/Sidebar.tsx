@@ -30,11 +30,8 @@ export function Sidebar() {
   return (
     <div className="w-64 bg-sidebar text-sidebar-foreground flex flex-col h-[100dvh] border-r border-sidebar-border shrink-0 fixed left-0 top-0">
       <div className="p-6">
-        <Link href={isAdmin ? "/admin" : "/dashboard"} className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded bg-sidebar-primary text-sidebar-primary-foreground flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Terminal size={18} strokeWidth={2.5} />
-          </div>
-          <span className="font-bold text-xl tracking-tight text-white">Mor.</span>
+        <Link href={isAdmin ? "/admin" : "/dashboard"}>
+          <span className="font-extrabold text-4xl tracking-tight text-[#785abe]">mor.</span>
         </Link>
       </div>
 

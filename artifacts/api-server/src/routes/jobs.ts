@@ -18,7 +18,7 @@ import {
 const router: IRouter = Router();
 
 const CURRENT_USER_ID = 1;
-const CURRENT_USER_NAME = "Dr. Ayşe Kaya";
+const CURRENT_USER_NAME = "Dr. Filippo Galletta";
 
 function formatJob(j: typeof jobsTable.$inferSelect) {
   return {

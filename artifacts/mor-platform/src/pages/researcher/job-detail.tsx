@@ -90,13 +90,13 @@ export default function JobDetail() {
       {job.status === "queued" && job.queuePosition && (
         <Card className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50">
           <CardContent className="pt-6 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xl shrink-0">
+            <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xl shrink-0">
               #{job.queuePosition}
             </div>
             <div>
               <h3 className="font-semibold text-amber-900 dark:text-amber-400">Position in Queue</h3>
               <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">
-                Estimated to start at {formatTime(job.estimatedStartAt)}. Priority level {job.priority}.
+                Estimated to start at {formatTime(job.estimatedStartAt ?? new Date(Date.now() + (job.queuePosition * 35 * 60000)).toISOString())}. Priority level {job.priority}.
               </p>
             </div>
           </CardContent>
