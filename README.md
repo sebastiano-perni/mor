@@ -1,6 +1,6 @@
 # MOR Platform
 
-A web application demo for HPC cluster management and job scheduling. Built for the EIT Digital I&E Summer School in Ankara.
+A web application demo for HPC cluster management and job scheduling. Built for the EIT Digital I&E Summer School in Ankara. This application was initially built with Replit and then expanded.
 
 ## Requirements
 
