@@ -1,10 +1,10 @@
 # MOR Platform
 
-A web application for HPC cluster management and job scheduling.
+A web application demo for HPC cluster management and job scheduling. Built for the EIT Digital I&E Summer School in Ankara.
 
 ## Requirements
 
-- [Docker](https://docs.docker.com/get-docker/) (recommended), **or** Node.js 20.19+ / 22.12+ with `pnpm` and PostgreSQL 17
+- [Docker](https://docs.docker.com/get-docker/) (recommended), **or** Node.js with `pnpm` and PostgreSQL 17
 
 ## Run
 
